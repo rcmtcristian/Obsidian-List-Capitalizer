@@ -6,7 +6,7 @@ import { Plugin, PluginSettingTab, Setting, Editor } from 'obsidian';
 
 const TRIGGER_CHARS: string[] = [' ', '.', ',', ';', ':', '!', '?', '{', '"', ')', ']', '%', '}'];
 const LAST_WORD_REGEX: RegExp = /[\p{L}\p{M}']+(?=\W*$)/u;
-const LIST_ITEM_REGEX: RegExp = /^- (\S+)/;
+const LIST_ITEM_REGEX: RegExp = /^[\t ]*[-*]\s+(\S+)/;
 const NUMBERED_LIST_REGEX: RegExp = /^(\d+)\.\s+(\S+)/;
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -122,17 +122,25 @@ export default class AutoCorrectPlugin extends Plugin {
     const trigger = wasEnter || TRIGGER_CHARS.includes((fullLine.substring(0, cursor.ch).slice(-1) || ''));
     if (!trigger) return;
 
-    // 1) List items ------------------------------------------------------
-    if (this.settings.capitalizeListItem) {
-      const trimmed = fullLine.trim();
-      if (trimmed.startsWith('- ')) {
-        this.correctListItem(editor, fullLine, lineNo);
-      } else if (NUMBERED_LIST_REGEX.test(trimmed)) {
-        this.correctNumberedList(editor, fullLine, lineNo);
-      }
-    }
+	  // 1) List items ------------------------------------------------------
+	  if (this.settings.capitalizeListItem) {
+		  // Tabs/Spaces am Anfang für die Erkennung ignorieren
+		  const trimmedIndent = fullLine.replace(/^[\t ]+/, '');
 
-    // 2) Word auto‑correction -------------------------------------------
+		  // Auf Bullet-Listen mit '-' oder '*' prüfen
+		  if (/^[-*]\s+/.test(trimmedIndent)) {
+			  this.correctListItem(editor, fullLine, lineNo);
+
+			  // Nummerierte Listen mit beliebiger Einrückung
+		  } else if (NUMBERED_LIST_REGEX.test(trimmedIndent)) {
+			  this.correctNumberedList(editor, fullLine, lineNo);
+		  }
+	  }
+
+
+
+
+	  // 2) Word auto‑correction -------------------------------------------
     this.correctWord(editor, fullLine, lineNo);
 
     // 3) Sentence beginnings --------------------------------------------
