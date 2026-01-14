@@ -1,4 +1,10 @@
-import { Plugin, PluginSettingTab, Setting, Editor } from "obsidian";
+import {
+	Plugin,
+	PluginSettingTab,
+	Setting,
+	Editor,
+	MarkdownView,
+} from "obsidian";
 
 // ────────────────────────────────────────────────────────────────────────────────
 // Globals
@@ -33,6 +39,7 @@ interface AutoCorrectSettings {
 	capitalizeListItem: boolean;
 	capitalizeCheckboxItem: boolean;
 	capitalizeSentences: boolean;
+	capitalizeInlineTitle: boolean;
 	abbreviations: string[];
 }
 
@@ -41,6 +48,7 @@ const DEFAULT_SETTINGS: AutoCorrectSettings = {
 	capitalizeListItem: false,
 	capitalizeCheckboxItem: false,
 	capitalizeSentences: false,
+	capitalizeInlineTitle: false,
 	abbreviations: ["e.g.", "i.e.", "etc.", "vs."],
 };
 
@@ -64,6 +72,9 @@ export default class AutoCorrectPlugin extends Plugin {
 	// Fast look‑up structures derived from settings
 	private abbreviationsSet = new Set<string>();
 	private exclusionSet = new Set<string>();
+
+	// MutationObserver for inline title
+	private titleObserver: MutationObserver | null = null;
 
 	// ──────────────────────────────────────────────────────────────────────
 	// Lifecycle
@@ -90,10 +101,16 @@ export default class AutoCorrectPlugin extends Plugin {
 				this.handleEditorChange(editor);
 			})
 		);
+
+		// Setup inline title observer
+		this.setupInlineTitleObserver();
 	}
 
 	onunload() {
 		console.log("Unloading AutoCorrectPlugin");
+		if (this.titleObserver) {
+			this.titleObserver.disconnect();
+		}
 	}
 
 	// ──────────────────────────────────────────────────────────────────────
@@ -107,6 +124,105 @@ export default class AutoCorrectPlugin extends Plugin {
 		this.exclusionSet = new Set(
 			this.settings.exclusionList.map((e) => e.toLowerCase())
 		);
+	}
+
+	// ──────────────────────────────────────────────────────────────────────
+	// Inline Title Capitalization
+	// ──────────────────────────────────────────────────────────────────────
+
+	private setupInlineTitleObserver() {
+		this.titleObserver = new MutationObserver(() => {
+			if (!this.settings.capitalizeInlineTitle) return;
+			this.capitalizeInlineTitle();
+		});
+
+		// Observe changes to the workspace
+		this.app.workspace.on("layout-change", () => {
+			this.attachTitleObserver();
+		});
+
+		this.app.workspace.on("active-leaf-change", () => {
+			this.attachTitleObserver();
+		});
+
+		// Initial attachment
+		this.attachTitleObserver();
+	}
+
+	private attachTitleObserver() {
+		if (!this.titleObserver || !this.settings.capitalizeInlineTitle) return;
+
+		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (!activeView) return;
+
+		const titleEl = activeView.containerEl.querySelector(
+			".inline-title"
+		) as HTMLElement;
+		if (!titleEl) return;
+
+		this.titleObserver.disconnect();
+		this.titleObserver.observe(titleEl, {
+			characterData: true,
+			subtree: true,
+			childList: true,
+		});
+	}
+
+	private capitalizeInlineTitle() {
+		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (!activeView) return;
+
+		const titleEl = activeView.containerEl.querySelector(
+			".inline-title"
+		) as HTMLElement;
+		if (!titleEl) return;
+
+		const currentText = titleEl.textContent || "";
+		const titleCased = this.toTitleCase(currentText);
+
+		if (currentText !== titleCased) {
+			// Store cursor position
+			const selection = window.getSelection();
+			const cursorPos = selection?.focusOffset || 0;
+
+			titleEl.textContent = titleCased;
+
+			// Restore cursor position
+			if (selection && titleEl.firstChild) {
+				try {
+					const range = document.createRange();
+					range.setStart(
+						titleEl.firstChild,
+						Math.min(cursorPos, titleCased.length)
+					);
+					range.collapse(true);
+					selection.removeAllRanges();
+					selection.addRange(range);
+				} catch (e) {
+					// Cursor restoration failed, ignore
+				}
+			}
+
+			// Trigger file rename
+			const file = activeView.file;
+			if (file) {
+				const newPath = file.parent?.path
+					? `${file.parent.path}/${titleCased}.md`
+					: `${titleCased}.md`;
+				this.app.fileManager.renameFile(file, newPath);
+			}
+		}
+	}
+
+	private toTitleCase(text: string): string {
+		return text
+			.split(" ")
+			.map((word) => {
+				if (word.length === 0) return word;
+				if (this.exclusionSet.has(word.toLowerCase())) return word;
+				return word[0].toUpperCase() + word.slice(1).toLowerCase();
+			})
+			.join(" ");
 	}
 
 	// ──────────────────────────────────────────────────────────────────────
@@ -493,6 +609,19 @@ class AutoCorrectSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.capitalizeCheckboxItem)
 					.onChange(async (value) => {
 						this.plugin.settings.capitalizeCheckboxItem = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// Capitalize inline title
+		new Setting(containerEl)
+			.setName("Capitalize inline title")
+			.setDesc("Automatically capitalize each word in the note title")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.capitalizeInlineTitle)
+					.onChange(async (value) => {
+						this.plugin.settings.capitalizeInlineTitle = value;
 						await this.plugin.saveSettings();
 					})
 			);

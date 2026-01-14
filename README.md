@@ -1,6 +1,6 @@
 # Obsidian AutoCorrect Plugin
 
-This plugin automatically fixes common capitalization errors in your Obsidian notes. It specifically targets words where the first two letters are mistakenly capitalized (e.g., `HAllo` instead of `Hallo`) and corrects them. Additionally, new features ensure that list items are formatted correctly and that both codeblocks and math expressions (LaTeX) are protected from auto-correction.
+This plugin automatically fixes common capitalization errors in your Obsidian notes. It specifically targets words where the first two letters are mistakenly capitalized (e.g., `HAllo` instead of `Hallo`) and corrects them. Additionally, features ensure that list items, checkboxes, sentences, and inline titles are formatted correctly while protecting codeblocks and math expressions from auto-correction.
 
 ## Features
 
@@ -10,34 +10,46 @@ This plugin automatically fixes common capitalization errors in your Obsidian no
 - **Exclusion List**  
   You can specify a list of words (comma separated) that should be excluded from any corrections.
 
-- **Abbreviation List**
-  This allows you to define common abbreviations (like `e.g.`, `i.e.`, or `etc.`) that the plugin recognizes. When these abbreviations are used, they prevent the plugin from mistakenly capitalizing words immediately following them, ensuring correct capitalization after abbreviations in your sentences.
+- **Abbreviation List**  
+  Define common abbreviations (like `e.g.`, `i.e.`, or `etc.`) that the plugin recognizes. When these abbreviations are used, they prevent the plugin from mistakenly capitalizing words immediately following them, ensuring correct capitalization after abbreviations in your sentences.
 
-- **Optimize List Items**  
-  When the "Capitalize First Letter in List" option is enabled, any line starting with `- `, `* ` or `1. ` will have the first letter of the following word automatically capitalized, also when those are in a Sub-List.
+- **Capitalize List Items**  
+  When enabled, any line starting with `-`, `*`, or `1.` will have the first letter of the following word automatically capitalized, including sub-lists.
   
-- **Example:**  
-  - Before:  
-    ```
-    - hallo
-    ```  
-  - After:  
-    ```
-    - Hallo
-    ```  
+  **Example:**  
+  - Before: `- hallo`  
+  - After: `- Hallo`  
+  
   Additionally, if a list item is incorrectly capitalized (e.g., `- HAllo`), the plugin will correct it to `- Hallo`.
 
+- **Capitalize Checkbox Items**  
+  When enabled, checkbox list items (e.g., `- [ ] task`, `- [x] done`) will have the first letter of the following word automatically capitalized.
+  
+  **Example:**  
+  - Before: `- [ ] buy groceries`  
+  - After: `- [ ] Buy groceries`
+
+- **Capitalize Inline Title**  
+  When enabled, automatically capitalizes the first letter of each word in the note's inline title (the title shown at the top of the note). The file will be renamed to match the capitalized title.
+  
+  **Example:**  
+  - Before: `my important note`  
+  - After: `My Important Note`
+
+- **Capitalize Sentence Beginnings**  
+  When enabled, the first letter of each sentence will be capitalized if it was typed in lowercase.
+
 - **Codeblock Protection**  
-  The plugin detects fenced codeblocks and inline code (using backticks) and skips any corrections within these areas.
+  The plugin detects fenced codeblocks (` ``` `) and inline code (using backticks) and skips any corrections within these areas.
 
 - **Mathblock Protection**  
-  The plugin detects LaTeX math expressions – both inline (delimited by `$...$`) and block math (delimited by `$$...$$`) – and leaves them unchanged. This prevents auto-correction of mathematical notations.
+  The plugin detects LaTeX math expressions (both inline `$...$` and block `$$...$$`) and leaves them unchanged, preventing auto-correction of mathematical notations.
 
-- **YAML Front-matter Protection**
-  The plugin also detects the YAML Frontmatter and wont correct inside it. 
+- **YAML Front-matter Protection**  
+  The plugin detects YAML frontmatter and won't correct inside it.
 
 - **Trigger on Various Characters**  
-  Corrections are triggered by specific punctuation characters (e.g., space, period, comma, etc.) or by pressing Enter. When Enter is pressed, the plugin checks the previous line for corrections (even in lists or quotes).
+  Corrections are triggered by specific punctuation characters (e.g., space, period, comma, etc.) or by pressing Enter. When Enter is pressed, the plugin checks the previous line for corrections.
 
 ## Installation
 
@@ -55,18 +67,29 @@ This plugin automatically fixes common capitalization errors in your Obsidian no
 
 ## Configuration
 
-The plugin provides three main settings:
+The plugin provides the following settings:
 
 - **Exclusion List**  
   Enter words (comma separated) that should be excluded from any auto-correction.
 
-- **Capitalize First Letter in List**  
-  When enabled, any list item (lines starting with `- `or 'x. ' where x is a number) will have the first letter of the following word capitalized.  
-  **Example:**  
-  - Before: `- hallo`  
-  - After: `- Hallo`  
-  Also, if a word such as `- HAllo` is detected, it will be corrected to `- Hallo`.
+- **Capitalize List Items**  
+  When enabled, any list item (lines starting with `-`, `*`, or `1.`) will have the first letter of the following word capitalized.
+
+- **Capitalize Checkbox Items**  
+  When enabled, checkbox items (lines like `- [ ]` or `- [x]`) will have the first letter of the following word capitalized.
+
+- **Capitalize Inline Title**  
+  When enabled, automatically capitalizes the first letter of each word in the note's inline title and renames the file accordingly. Requires "Show inline title" to be enabled in Settings → Appearance.
 
 - **Capitalize Sentence Beginnings**  
-  When enabled, the first letter of the last sentence in a line will be capitalized if it was typed in lowercase.
+  When enabled, the first letter of each sentence will be capitalized if it was typed in lowercase.
 
+- **Abbreviations**  
+  Define common abbreviations (visible only when "Capitalize Sentence Beginnings" is enabled) that end with a period but should not trigger sentence capitalization for the following word.
+
+## Usage Tips
+
+- Enable only the features you need to avoid over-correction.
+- Use the exclusion list for proper nouns, acronyms, or specialized terms you don't want modified.
+- The inline title capitalization works in real-time as you type.
+- All corrections respect protected areas (code, math, YAML frontmatter).
