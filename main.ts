@@ -93,13 +93,13 @@ export default class AutoCorrectPlugin extends Plugin {
 				this.lastKeyWasEnter = evt.key === "Enter";
 				this.lastKeyTyped = evt.key;
 			},
-			true
+			true,
 		);
 
 		this.registerEvent(
 			this.app.workspace.on("editor-change", (editor: Editor) => {
 				this.handleEditorChange(editor);
-			})
+			}),
 		);
 
 		// Setup inline title observer
@@ -107,6 +107,8 @@ export default class AutoCorrectPlugin extends Plugin {
 	}
 
 	onunload() {
+		if (this.titleDebounceTimer) clearTimeout(this.titleDebounceTimer);
+		this.titleObserver?.disconnect();
 		console.log("Unloading AutoCorrectPlugin");
 		if (this.titleObserver) {
 			this.titleObserver.disconnect();
@@ -119,24 +121,28 @@ export default class AutoCorrectPlugin extends Plugin {
 
 	private updateInternalSets() {
 		this.abbreviationsSet = new Set(
-			this.settings.abbreviations.map((a) => a.toLowerCase())
+			this.settings.abbreviations.map((a) => a.toLowerCase()),
 		);
 		this.exclusionSet = new Set(
-			this.settings.exclusionList.map((e) => e.toLowerCase())
+			this.settings.exclusionList.map((e) => e.toLowerCase()),
 		);
 	}
 
 	// ──────────────────────────────────────────────────────────────────────
 	// Inline Title Capitalization
 	// ──────────────────────────────────────────────────────────────────────
+	private titleDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 	private setupInlineTitleObserver() {
 		this.titleObserver = new MutationObserver(() => {
 			if (!this.settings.capitalizeInlineTitle) return;
-			this.capitalizeInlineTitle();
+
+			if (this.titleDebounceTimer) clearTimeout(this.titleDebounceTimer);
+			this.titleDebounceTimer = setTimeout(() => {
+				this.capitalizeInlineTitle();
+			}, 300);
 		});
 
-		// Observe changes to the workspace
 		this.app.workspace.on("layout-change", () => {
 			this.attachTitleObserver();
 		});
@@ -145,7 +151,6 @@ export default class AutoCorrectPlugin extends Plugin {
 			this.attachTitleObserver();
 		});
 
-		// Initial attachment
 		this.attachTitleObserver();
 	}
 
@@ -156,7 +161,7 @@ export default class AutoCorrectPlugin extends Plugin {
 		if (!activeView) return;
 
 		const titleEl = activeView.containerEl.querySelector(
-			".inline-title"
+			".inline-title",
 		) as HTMLElement;
 		if (!titleEl) return;
 
@@ -173,7 +178,7 @@ export default class AutoCorrectPlugin extends Plugin {
 		if (!activeView) return;
 
 		const titleEl = activeView.containerEl.querySelector(
-			".inline-title"
+			".inline-title",
 		) as HTMLElement;
 		if (!titleEl) return;
 
@@ -193,7 +198,7 @@ export default class AutoCorrectPlugin extends Plugin {
 					const range = document.createRange();
 					range.setStart(
 						titleEl.firstChild,
-						Math.min(cursorPos, titleCased.length)
+						Math.min(cursorPos, titleCased.length),
 					);
 					range.collapse(true);
 					selection.removeAllRanges();
@@ -255,7 +260,7 @@ export default class AutoCorrectPlugin extends Plugin {
 		const trigger =
 			wasEnter ||
 			TRIGGER_CHARS.includes(
-				fullLine.substring(0, cursor.ch).slice(-1) || ""
+				fullLine.substring(0, cursor.ch).slice(-1) || "",
 			);
 		if (!trigger) return;
 
@@ -336,7 +341,7 @@ export default class AutoCorrectPlugin extends Plugin {
 		doc.replaceRange(
 			replacement,
 			{ line: lineNo, ch: wordStart },
-			{ line: lineNo, ch: wordStart + word.length }
+			{ line: lineNo, ch: wordStart + word.length },
 		);
 	}
 
@@ -381,7 +386,7 @@ export default class AutoCorrectPlugin extends Plugin {
 		doc.replaceRange(
 			replacement,
 			{ line: lineNo, ch: wordStart },
-			{ line: lineNo, ch: wordStart + word.length }
+			{ line: lineNo, ch: wordStart + word.length },
 		);
 	}
 
@@ -405,7 +410,7 @@ export default class AutoCorrectPlugin extends Plugin {
 			doc.replaceRange(
 				newWord,
 				{ line: lineNo, ch: wordStart },
-				{ line: lineNo, ch: wordStart + word.length }
+				{ line: lineNo, ch: wordStart + word.length },
 			);
 		}
 	}
@@ -430,7 +435,7 @@ export default class AutoCorrectPlugin extends Plugin {
 			doc.replaceRange(
 				word[1].toLowerCase(),
 				{ line: lineNo, ch: start + 1 },
-				{ line: lineNo, ch: start + 2 }
+				{ line: lineNo, ch: start + 2 },
 			);
 		}
 	}
@@ -461,7 +466,7 @@ export default class AutoCorrectPlugin extends Plugin {
 			doc.replaceRange(
 				charToCheck.toUpperCase(),
 				{ line: lineNo, ch: charIdx },
-				{ line: lineNo, ch: charIdx + 1 }
+				{ line: lineNo, ch: charIdx + 1 },
 			);
 		}
 	}
@@ -473,7 +478,7 @@ export default class AutoCorrectPlugin extends Plugin {
 	private isInProtectedBlock(
 		editor: Editor,
 		pos: number,
-		lineNo?: number
+		lineNo?: number,
 	): boolean {
 		if (this._lookedForProtectedBlock) return this._isInProtectedBlock;
 
@@ -502,7 +507,7 @@ export default class AutoCorrectPlugin extends Plugin {
 		// 2) fenced code blocks ```
 		const linesAbove = doc.getRange(
 			{ line: 0, ch: 0 },
-			{ line: currentLine, ch: 0 }
+			{ line: currentLine, ch: 0 },
 		);
 		const codeBlockMatches = (linesAbove.match(/^```/gm) || []).length;
 		if (codeBlockMatches % 2 !== 0) {
@@ -546,7 +551,7 @@ export default class AutoCorrectPlugin extends Plugin {
 		this.settings = Object.assign(
 			{},
 			DEFAULT_SETTINGS,
-			await this.loadData()
+			await this.loadData(),
 		);
 	}
 
@@ -586,7 +591,7 @@ class AutoCorrectSettingTab extends PluginSettingTab {
 							.split(",")
 							.map((w) => w.trim());
 						await this.plugin.saveSettings();
-					})
+					}),
 			);
 
 		// Capitalize list items
@@ -598,7 +603,7 @@ class AutoCorrectSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.capitalizeListItem = value;
 						await this.plugin.saveSettings();
-					})
+					}),
 			);
 
 		// Capitalize checkbox items
@@ -610,7 +615,7 @@ class AutoCorrectSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.capitalizeCheckboxItem = value;
 						await this.plugin.saveSettings();
-					})
+					}),
 			);
 
 		// Capitalize inline title
@@ -623,7 +628,7 @@ class AutoCorrectSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.capitalizeInlineTitle = value;
 						await this.plugin.saveSettings();
-					})
+					}),
 			);
 
 		// Capitalize sentences
@@ -636,7 +641,7 @@ class AutoCorrectSettingTab extends PluginSettingTab {
 						this.plugin.settings.capitalizeSentences = value;
 						await this.plugin.saveSettings();
 						this.display(); // refresh to show/hide abbreviation box
-					})
+					}),
 			);
 
 		// Abbreviations (visible only if sentence cap is enabled)
@@ -644,7 +649,7 @@ class AutoCorrectSettingTab extends PluginSettingTab {
 			new Setting(containerEl)
 				.setName("Abbreviations")
 				.setDesc(
-					"Comma separated list of abbreviations that end with a dot but should not end a sentence."
+					"Comma separated list of abbreviations that end with a dot but should not end a sentence.",
 				)
 				.addTextArea((text) =>
 					text
@@ -654,7 +659,7 @@ class AutoCorrectSettingTab extends PluginSettingTab {
 								.split(",")
 								.map((w) => w.trim());
 							await this.plugin.saveSettings();
-						})
+						}),
 				);
 		}
 	}
